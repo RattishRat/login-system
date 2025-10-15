@@ -10,13 +10,15 @@ const prisma = new PrismaClient();
 const app = express();
 const PORT = process.env.PORT || 4000;
 const JWT_SECRET = process.env.JWT_SECRET || 'please_change_this';
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5180';
+
+
 
 app.use(express.json());
 app.use(cookieParser());
 app.use(
   cors({
-  origin: 'http://localhost:5175',
+  origin: FRONTEND_URL,
   credentials: true,
 })
 
@@ -119,8 +121,54 @@ app.get('/api/users', authMiddleware, async (req, res) => {
   }
 });
 
+  // Create user
+app.post('/api/users', async (req, res) => {
+  try {
+    const { name, email } = req.body;
+    const user = await prisma.user.create({ data: { name, email } });
+    res.json(user);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Get all users
+app.get('/api/users', async (req, res) => {
+  const users = await prisma.user.findMany();
+  res.json(users);
+});
+
+// Get single user
+app.get('/api/users/:id', async (req, res) => {
+  const user = await prisma.user.findUnique({ where: { id: Number(req.params.id) } });
+  res.json(user);
+});
+
+// Update user
+app.put('/api/users/:id', async (req, res) => {
+  try {
+    const { name, email } = req.body;
+    const user = await prisma.user.update({
+      where: { id: Number(req.params.id) },
+      data: { name, email },
+    });
+    res.json(user);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Delete user
+app.delete('/api/users/:id', async (req, res) => {
+  try {
+    await prisma.user.delete({ where: { id: Number(req.params.id) } });
+    res.json({ message: 'User deleted' });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
-
-////log out

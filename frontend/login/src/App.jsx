@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import NavBar from './components/NavBar'
 import Register from './pages/Register'
 import Login from './pages/Login'
 import Profile from './pages/Profile'
 import Users from './pages/Users'
+import UsersCRUD from './pages/UsersCRUD';
 
 function App() {
   const [user, setUser] = useState(null)
@@ -25,10 +26,10 @@ function App() {
           <Route path='/login' element={<Login onLogin={(u) => setUser(u)} />} />
           <Route path='/profile' element={user ? <Profile user={user} /> : <Navigate to='/login' />} />
           <Route path='/users' element={user ? <Users /> : <Navigate to='/login' />} />
+           <Route path="/users" element={<UsersCRUD />} />
         </Routes>
       </div>
     </>
   )
 }
-
-export default App
+export default App;
