@@ -1,84 +1,113 @@
 import React, { useEffect, useState } from 'react';
 
 export default function UsersCRUD() {
-  const [users, setUsers] = useState([]);
-  const [form, setForm] = useState({ name: '', email: '' });
+  const [tickets, setTickets] = useState([]);
+  const [form, setForm] = useState({ title: '', content: '', published: false });
   const [editingId, setEditingId] = useState(null);
 
-  const API_URL = 'http://localhost:4000/api/users';
+  const API_URL = 'http://localhost:4000/api/tickets';
 
-  // Fetch users
-  const fetchUsers = async () => {
-    const res = await fetch(API_URL);
-    const data = await res.json();
-    setUsers(data);
+  const fetchTickets = async () => {
+    try {
+      const res = await fetch(API_URL, { credentials: 'include' });
+      const data = await res.json();
+      setTickets(data.tickets || []);
+    } catch (err) {
+      console.error(err);
+      setTickets([]);
+    }
   };
 
   useEffect(() => {
-    fetchUsers();
+    fetchTickets();
   }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    try {
+      if (editingId) {
+        await fetch(`${API_URL}/${editingId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(form),
+          credentials: 'include',
+        });
+      } else {
+        await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(form),
+          credentials: 'include',
+        });
+      }
 
-    if (editingId) {
-      await fetch(`${API_URL}/${editingId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
-    } else {
-      await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
+      setForm({ title: '', content: '', published: false });
+      setEditingId(null);
+      fetchTickets();
+    } catch (err) {
+      console.error(err);
     }
-
-    setForm({ name: '', email: '' });
-    setEditingId(null);
-    fetchUsers();
   };
 
-  const handleEdit = (user) => {
-    setForm({ name: user.name, email: user.email });
-    setEditingId(user.id);
+  const handleEdit = (ticket) => {
+    setForm({
+      title: ticket.title,
+      content: ticket.content || '',
+      published: ticket.published,
+    });
+    setEditingId(ticket.id);
   };
 
   const handleDelete = async (id) => {
-    await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
-    fetchUsers();
+    try {
+      await fetch(`${API_URL}/${id}`, { method: 'DELETE', credentials: 'include' });
+      fetchTickets();
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (
     <div className="p-4">
-      <h1>Simple User CRUD</h1>
+      <h1>Create a post</h1>
       <form onSubmit={handleSubmit}>
         <input
           type="text"
-          placeholder="Name"
-          value={form.name}
-          onChange={(e) => setForm({ ...form, name: e.target.value })}
+          placeholder="Title"
+          value={form.title}
+          onChange={(e) => setForm({ ...form, title: e.target.value })}
           required
         />
-        <input
-          type="email"
-          placeholder="Email"
-          value={form.email}
-          onChange={(e) => setForm({ ...form, email: e.target.value })}
-          required
+        <textarea
+          placeholder="Content"
+          value={form.content}
+          onChange={(e) => setForm({ ...form, content: e.target.value })}
         />
-        <button type="submit">{editingId ? 'Update' : 'Add'} User</button>
+        <label>
+          Published:
+          <input
+            type="checkbox"
+            checked={form.published}
+            onChange={(e) => setForm({ ...form, published: e.target.checked })}
+          />
+        </label>
+        <button type="submit">{editingId ? 'Update' : 'Add'} Post</button>
       </form>
 
       <ul>
-        {users.map((user) => (
-          <li key={user.id}>
-            {user.name} — {user.email}
-            <button onClick={() => handleEdit(user)}>Edit</button>
-            <button onClick={() => handleDelete(user.id)}>Delete</button>
-          </li>
-        ))}
+        {tickets.length === 0 ? (
+          <p>No events found</p>
+        ) : (
+          tickets.map((ticket) => (
+            <li key={ticket.id}>
+              <strong>{ticket.title}</strong> {ticket.published ? '(Published)' : '(Draft)'}
+              <p>{ticket.content}</p>
+              <small>Author: {ticket.author.name || ticket.author.email}</small>
+              <button onClick={() => handleEdit(ticket)}>Edit</button>
+              <button onClick={() => handleDelete(ticket.id)}>Delete</button>
+            </li>
+          ))
+        )}
       </ul>
     </div>
   );

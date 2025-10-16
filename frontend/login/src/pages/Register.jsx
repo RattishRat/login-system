@@ -24,6 +24,7 @@ export default function Register() {
   }
 
   return (
+    <div className="auth-container">
     <form onSubmit={handleSubmit} style={{maxWidth:420}}>
       <h2>Register</h2>
       {error && <div style={{color:'red'}}>{error}</div>}
@@ -37,5 +38,6 @@ export default function Register() {
       </div>
       <button type="submit">Register</button>
     </form>
+    </div>
   )
 }

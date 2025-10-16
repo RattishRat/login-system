@@ -14,23 +14,19 @@ datasource db {
 }
 
 model User {
-  id              Int      @id @default(autoincrement())
-  email           String   @unique
-  name            String?
-  password        String
-  tickets         Ticket[] // tickets created by this user
-  assignedTickets Ticket[] @relation("AssignedTickets") // tickets assigned to this user (if admin)
+  id        Int       @id @default(autoincrement())
+  email     String    @unique
+  password  String
+  createdAt DateTime  @default(now())
+  tickets   Ticket[]
 }
 
 model Ticket {
-  id           Int          @id @default(autoincrement())
-  title        String
-  content      String?
-  published    Boolean      @default(false)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  author       User         @relation(fields: [authorId], references: [id])
-  authorId     Int
-  assignedTo   User?        @relation("AssignedTickets", fields: [assignedToId], references: [id])
-  assignedToId Int?
+  id        Int       @id @default(autoincrement())
+  title     String
+  content   String?
+  published Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  author    User      @relation(fields: [authorId], references: [id])
+  authorId  Int
 }

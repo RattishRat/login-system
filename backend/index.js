@@ -10,28 +10,26 @@ const prisma = new PrismaClient();
 const app = express();
 const PORT = process.env.PORT || 4000;
 const JWT_SECRET = process.env.JWT_SECRET || 'please_change_this';
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5180';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
-
-
+// Middleware
 app.use(express.json());
 app.use(cookieParser());
-app.use(
-  cors({
+app.use(cors({
   origin: FRONTEND_URL,
   credentials: true,
-})
+}));
 
-);
-///////imports
-
+// JWT token generation
 function generateToken(userId) {
   return jwt.sign({ userId }, JWT_SECRET, { expiresIn: '2h' });
 }
 
+// Auth middleware
 async function authMiddleware(req, res, next) {
-  const token = req.cookies && req.cookies.token;
+  const token = req.cookies?.token;
   if (!token) return res.status(401).json({ error: 'Not authenticated' });
+
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     const user = await prisma.user.findUnique({
@@ -39,6 +37,7 @@ async function authMiddleware(req, res, next) {
       select: { id: true, email: true, createdAt: true },
     });
     if (!user) return res.status(401).json({ error: 'Invalid token' });
+
     req.user = user;
     next();
   } catch (err) {
@@ -46,8 +45,7 @@ async function authMiddleware(req, res, next) {
   }
 }
 
-////////JWT
-
+// Registration
 app.post('/api/register', async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
@@ -63,6 +61,7 @@ app.post('/api/register', async (req, res) => {
     const hashed = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({ data: { email, password: hashed } });
     const { password: _pw, ...safeUser } = user;
+
     return res.json({ message: 'User created', user: safeUser });
   } catch (err) {
     console.error(err);
@@ -70,21 +69,22 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
-//////register
-
+// Login
 app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+
   try {
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) return res.status(400).json({ error: 'Invalid credentials' });
+
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(400).json({ error: 'Invalid credentials' });
 
     const token = generateToken(user.id);
     res.cookie('token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: false, ////
       sameSite: 'lax',
       maxAge: 2 * 60 * 60 * 1000, // 2 hours
     });
@@ -97,78 +97,77 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-//////login
-
+// Logout
 app.post('/api/logout', (req, res) => {
   res.clearCookie('token', { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production' });
   res.json({ message: 'Logged out' });
 });
 
-app.get('/api/profile', authMiddleware, (req, res) => {
+// Get current authenticated user
+app.get('/api/me', authMiddleware, (req, res) => {
   res.json({ user: req.user });
 });
 
-app.get('/api/users', authMiddleware, async (req, res) => {
+
+// ✅ CRUD operations for tickets
+app.get('/api/tickets', authMiddleware, async (req, res) => {
   try {
-    const users = await prisma.user.findMany({
-      select: { id: true, email: true, createdAt: true },
+    const tickets = await prisma.ticket.findMany({
+      include: { author: true },
       orderBy: { createdAt: 'desc' },
     });
-    res.json({ users });
+    res.json({ tickets });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-  // Create user
-app.post('/api/users', async (req, res) => {
+app.post('/api/tickets', authMiddleware, async (req, res) => {
+  const { title, content, published } = req.body;
   try {
-    const { name, email } = req.body;
-    const user = await prisma.user.create({ data: { name, email } });
-    res.json(user);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
-// Get all users
-app.get('/api/users', async (req, res) => {
-  const users = await prisma.user.findMany();
-  res.json(users);
-});
-
-// Get single user
-app.get('/api/users/:id', async (req, res) => {
-  const user = await prisma.user.findUnique({ where: { id: Number(req.params.id) } });
-  res.json(user);
-});
-
-// Update user
-app.put('/api/users/:id', async (req, res) => {
-  try {
-    const { name, email } = req.body;
-    const user = await prisma.user.update({
-      where: { id: Number(req.params.id) },
-      data: { name, email },
+    const ticket = await prisma.ticket.create({
+      data: {
+        title,
+        content,
+        published,
+        authorId: req.user.id,
+      },
     });
-    res.json(user);
+    res.json(ticket);
   } catch (err) {
+    console.error(err);
     res.status(400).json({ error: err.message });
   }
 });
 
-// Delete user
-app.delete('/api/users/:id', async (req, res) => {
+app.put('/api/tickets/:id', authMiddleware, async (req, res) => {
+  const { id } = req.params;
+  const { title, content, published } = req.body;
   try {
-    await prisma.user.delete({ where: { id: Number(req.params.id) } });
-    res.json({ message: 'User deleted' });
+    const ticket = await prisma.ticket.update({
+      where: { id: Number(id) },
+      data: { title, content, published },
+    });
+    res.json(ticket);
   } catch (err) {
+    console.error(err);
     res.status(400).json({ error: err.message });
   }
 });
 
+app.delete('/api/tickets/:id', authMiddleware, async (req, res) => {
+  const { id } = req.params;
+  try {
+    await prisma.ticket.delete({ where: { id: Number(id) } });
+    res.json({ message: 'Ticket deleted' });
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ error: err.message });
+  }
+});
 
+// Health check
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
-app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`✅ Server running on http://localhost:${PORT}`));
