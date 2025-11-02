@@ -24,6 +24,7 @@ export default function Login({ onLogin }) {
 
   return (
      <div className="auth-container">
+     
     <form onSubmit={handleSubmit} style={{maxWidth:420}}>
       <h2>Login</h2>
       {error && <div style={{color:'red'}}>{error}</div>}
@@ -37,6 +38,7 @@ export default function Login({ onLogin }) {
       </div>
       <button type="submit">Login</button>
     </form>
+
     </div>
   )
 }

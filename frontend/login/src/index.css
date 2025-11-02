@@ -229,9 +229,10 @@ nav a {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
+  height: 100vh;
   background: linear-gradient(135deg, #faf3f3, #f8d9d9);
-  padding: 12px;
+  margin: 0;
+  padding: 0;
 }
 
 .auth-card {
@@ -244,7 +245,10 @@ nav a {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  box-sizing: border-box;
 }
+
+
 
 .auth-card h2 {
   text-align: center;
