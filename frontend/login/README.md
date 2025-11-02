@@ -92,4 +92,4 @@ npm run dev
 # npm start
 
 
-HolySpiritus findafun
+HolySpiritus FindAFun
